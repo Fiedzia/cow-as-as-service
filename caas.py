@@ -5,7 +5,7 @@ from flask import Flask, request, abort, make_response, Response
 app = Flask(__name__)
 
 
-@app.route('/cowsay/')
+@app.route('/cowsay/', methods=['GET', 'POST'])
 def cowsay():
     helpmsg = '''
 
@@ -16,6 +16,7 @@ def cowsay():
 
             say TEXT
                 draw a cow saying TEXT
+                if no TEXT is given, and file named '-' is present, it will be used
 
     '''
     if not 'command' in request.args or request.args['command'] not in ('help', 'say'):
@@ -25,11 +26,14 @@ def cowsay():
     if command == 'help':
         return Response(helpmsg, mimetype='text/plain')
     elif command == 'say':
-        if not arguments or len(arguments) > 1:
+        if (not arguments and '-' not in request.files) or len(arguments) > 1:
             return Response(helpmsg, mimetype='text/plain')
         else:
-            return  Response(cow.get_cow()().milk(msg=arguments[0]), mimetype='text/plain')
-
+            if arguments:
+                text = arguments[0]
+            else:
+                text = request.files['-'].stream.read().decode('utf8')
+            return Response(cow.get_cow()().milk(msg=text), mimetype='text/plain')
 
 if __name__ == '__main__':
     app.run()
